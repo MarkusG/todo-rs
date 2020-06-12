@@ -42,7 +42,14 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
 
 fn list() -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string("todo.txt")?;
-    println!("{}", contents);
+    let todos = contents.lines();
+
+    for todo in todos {
+        let words: Vec<&str> = todo.split(" ").collect();
+        let todo_num = words[0].parse::<i32>().unwrap();
+        let todo_content = words[1..].join(" ");
+        println!("{}. {}", todo_num, todo_content);
+    }
     Ok(())
 }
 
