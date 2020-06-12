@@ -1,5 +1,6 @@
 use std::fs;
 use std::{error::Error, fmt};
+use std::cmp::Ordering;
 
 #[derive(Debug)]
 pub enum TodoError {
@@ -31,6 +32,40 @@ impl Config {
     }
 }
 
+#[derive(Eq)]
+struct Todo {
+    index: i32,
+    content: String
+}
+
+impl Todo {
+    fn new(line: &str) -> Result<Todo, Box<dyn Error>> {
+        let words: Vec<&str> = line.split(" ").collect();
+        let index = words[0].parse::<i32>()?;
+        let content = words[1..].join(" ").clone();
+
+        Ok(Todo { index, content })
+    }
+}
+
+impl Ord for Todo {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.index.cmp(&other.index)
+    }
+}
+
+impl PartialOrd for Todo {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for Todo {
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index
+    }
+}
+
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     match config.verb.as_str() {
         "list" => list(),
@@ -42,13 +77,11 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
 
 fn list() -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string("todo.txt")?;
-    let todos = contents.lines();
+    let mut todos = contents.lines().map(|l| Todo::new(l).unwrap()).collect::<Vec<_>>();
+    todos.sort();
 
     for todo in todos {
-        let words: Vec<&str> = todo.split(" ").collect();
-        let todo_num = words[0].parse::<i32>().unwrap();
-        let todo_content = words[1..].join(" ");
-        println!("{}. {}", todo_num, todo_content);
+        println!("{}. {}", todo.index, todo.content);
     }
     Ok(())
 }
