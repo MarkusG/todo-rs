@@ -21,7 +21,7 @@ impl fmt::Display for TodoError {
 
 pub struct Config {
     pub verb: String,
-    pub noun: String
+    pub noun: Option<String>
 }
 
 impl Config {
@@ -31,9 +31,13 @@ impl Config {
         }  
 
         let verb = args[1].clone();
-        let noun = args[2..].join(" ").clone();
 
-        Ok(Config { noun, verb })
+        if args.len() > 2 {
+            let noun = args[2..].join(" ").clone();
+            return Ok(Config { noun: Some(noun), verb })
+        }
+
+        Ok(Config { noun: None, verb })
     }
 }
 
@@ -74,6 +78,13 @@ impl PartialEq for Todo {
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     match config.verb.as_str() {
         "list" => list(),
+        "add" => {
+            if let Some(noun) = config.noun {
+                add(&noun)
+            } else {
+                Err(Box::new(TodoError::NotEnoughArguments))
+            }
+        }
         // note: Err and Error are NOT closely related
         // Err is a Result type and Error is a trait
         _ => Err(Box::new(TodoError::InvalidCommand))
@@ -97,12 +108,16 @@ mod tests {
 
     #[test]
     fn config() {
-        let args: Vec<String> = vec!["argOne", "argTwo", "argThree"]
+        let args: Vec<String> = vec!["argOne", "argTwo", "argThree", "argFour"]
             .iter()
             .map(|x| x.to_string())
             .collect();
         let config = Config::new(&args[..]).unwrap();
         assert_eq!(config.verb, "argTwo");
-        assert_eq!(config.noun, "argThree");
+        if let Some(s) = config.noun {
+            assert_eq!(s, "argThree argFour");
+        } else {
+            panic!("config.noun is None");
+        }
     }
 }
