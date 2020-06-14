@@ -1,4 +1,5 @@
-use std::fs;
+use std::{fs, fs::OpenOptions};
+use std::io::{Read, Write};
 use std::{error::Error, fmt};
 use std::cmp::Ordering;
 
@@ -91,14 +92,42 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     }
 }
 
+fn parse_todos(lines: &str) -> Result<Vec<Todo>, Box<dyn Error>> {
+    Ok(lines.lines().map(|l| Todo::new(l).unwrap()).collect::<Vec<_>>())
+}
+
 fn list() -> Result<(), Box<dyn Error>> {
-    let contents = fs::read_to_string("todo.txt")?;
-    let mut todos = contents.lines().map(|l| Todo::new(l).unwrap()).collect::<Vec<_>>();
+    let file_contents = fs::read_to_string("todo.txt")?;
+    let mut todos = parse_todos(&file_contents)?;
     todos.sort();
 
     for todo in todos {
         println!("{}. {}", todo.index, todo.content);
     }
+    Ok(())
+}
+
+fn add(content: &str) -> Result<(), Box<dyn Error>> {
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .append(true)
+        .open("todo.txt")?;
+    let mut file_contents = String::new();
+    file.read_to_string(&mut file_contents)?;
+    let mut todos = parse_todos(&file_contents)?;
+    todos.sort();
+
+    let mut index: i32 = 1;
+    for todo in todos {
+        if todo.index != index {
+            break;
+        }
+        index += 1;
+    }
+    
+    writeln!(file, "{}", format!("{} {}", index, content))?;
     Ok(())
 }
 
@@ -119,5 +148,17 @@ mod tests {
         } else {
             panic!("config.noun is None");
         }
+    }
+
+    #[test]
+    fn parse() {
+        let contents = "2 Something else\n1 Something\n4 Another thing\n";
+        let todos = parse_todos(&contents).unwrap();
+        assert_eq!(todos[0].index, 2);
+        assert_eq!(todos[0].content, "Something else");
+        assert_eq!(todos[1].index, 1);
+        assert_eq!(todos[1].content, "Something");
+        assert_eq!(todos[2].index, 4);
+        assert_eq!(todos[2].content, "Another thing");
     }
 }
