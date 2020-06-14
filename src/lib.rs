@@ -22,11 +22,11 @@ pub struct Config {
 
 impl Config {
     pub fn new(args: &[String]) -> Result<Config, &'static str> {
-        if args.len() < 3 {
+        if args.len() < 2 {
             return Err("not enough arguments");
         }  
         let verb = args[1].clone();
-        let noun = args[2].clone();
+        let noun = args[2..].join(" ").clone();
 
         Ok(Config { noun, verb })
     }
