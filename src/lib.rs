@@ -4,14 +4,18 @@ use std::cmp::Ordering;
 
 #[derive(Debug)]
 pub enum TodoError {
-    InvalidCommand
+    InvalidCommand,
+    NotEnoughArguments
 }
 
 impl Error for TodoError {}
 
 impl fmt::Display for TodoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Invalid command")
+        match self {
+            TodoError::InvalidCommand => write!(f, "Invalid command"),
+            TodoError::NotEnoughArguments => write!(f, "Not enough arguments")
+        }
     }
 }
 
@@ -21,10 +25,11 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(args: &[String]) -> Result<Config, &'static str> {
+    pub fn new(args: &[String]) -> Result<Config, Box<dyn Error>> {
         if args.len() < 2 {
-            return Err("not enough arguments");
+            return Err(Box::new(TodoError::NotEnoughArguments));
         }  
+
         let verb = args[1].clone();
         let noun = args[2..].join(" ").clone();
 
