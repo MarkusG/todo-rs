@@ -6,7 +6,8 @@ use std::cmp::Ordering;
 #[derive(Debug)]
 pub enum TodoError {
     InvalidCommand,
-    NotEnoughArguments
+    NotEnoughArguments,
+    BadArgument
 }
 
 impl Error for TodoError {}
@@ -15,7 +16,8 @@ impl fmt::Display for TodoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             TodoError::InvalidCommand => write!(f, "Invalid command"),
-            TodoError::NotEnoughArguments => write!(f, "Not enough arguments")
+            TodoError::NotEnoughArguments => write!(f, "Not enough arguments"),
+            TodoError::BadArgument => write!(f, "Bad argument")
         }
     }
 }
@@ -86,6 +88,17 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
                 Err(Box::new(TodoError::NotEnoughArguments))
             }
         }
+        "remove" => {
+            if let Some(noun) = config.noun {
+                if let Ok(index) = str::parse::<i32>(&noun) {
+                    remove(index)
+                } else {
+                    Err(Box::new(TodoError::BadArgument))
+                }
+            } else {
+                Err(Box::new(TodoError::NotEnoughArguments))
+            }
+        }
         // note: Err and Error are NOT closely related
         // Err is a Result type and Error is a trait
         _ => Err(Box::new(TodoError::InvalidCommand))
@@ -128,6 +141,23 @@ fn add(content: &str) -> Result<(), Box<dyn Error>> {
     }
     
     writeln!(file, "{}", format!("{} {}", index, content))?;
+    Ok(())
+}
+
+fn remove(index: i32) -> Result<(), Box<dyn Error>> {
+    let file_contents = fs::read_to_string("todo.txt")?;
+    let mut todos = parse_todos(&file_contents)?;
+    todos.retain(|t| t.index != index);
+    todos.sort();
+    
+    let mut file = OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open("todo.txt")?;
+
+    for todo in todos {
+        writeln!(file, "{}", format!("{} {}", todo.index, todo.content))?;
+    }
     Ok(())
 }
 
